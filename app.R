@@ -21,11 +21,15 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
         sidebarPanel(
             
             tags$h5('This app will standardize one or more variables for each value in a given ID column.'),
+            
             tags$p('Upload a delimited text file, indiciate if it has a header, choose the delimiter, 
               and then enter the ID variable name or position as well as the names or positions 
               of the variables to standardize. Once submitted, the variables listed will be populated 
               with the most frequently occuring value for each ID. The standardized table is then 
               printed to the screen and can be downloaded as a csv file.'),
+            
+            tags$a(href="https://github.com/davidldenton/standardize",
+                   tags$strong("Additional instructions & git repo", style = "color:purple")),
             
             tags$h3('Input controls'),
 
