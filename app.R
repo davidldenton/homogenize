@@ -1,3 +1,5 @@
+# Shiny application that standardizes variables for a given ID column
+
 library(tidyverse)
 library(shiny)
 library(shinythemes)
@@ -25,31 +27,36 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
               with the most frequently occuring value for each ID. The standardized table is then 
               printed to the screen and can be downloaded as a csv file.'),
             
-      
-            h3('Input controls'),
-            
+            tags$h3('Input controls'),
+
+            # Choose text file to up;oad
             fileInput(inputId = 'in_file',
                       label = 'Choose text file:',
                       accept = c('text/csv','text/comma-separated-values,text/plain','.csv'),
                       buttonLabel = 'Browse'),
-      
+
+            # Indicate if the file has a header or not
             radioButtons(inputId = 'header_check',
                          label = NULL,
                          choices = c('File with header', 'File without header')),
-      
+            
+            # Choose delimiter
             selectInput(inputId = 'delimiter',
                         label = 'Delimiter:',
                         choices = c(',', '|', 'tab'),
                         selected = ','),
-      
+            
+            # Input name or position of ID column
             textInput(inputId = 'id_var',
                       label = HTML('ID column name or numeric position'),
                       value = ''),
-      
+            
+            # Input list of variables to standardize
             textInput(inputId = 'variables',
                       label = HTML('List of variable names or numeric positions <br/>(comma-separated)'),
                       value = ''),
-      
+            
+            # Submit file for standardization process
             actionButton(inputId = 'submit',
                          label = 'Submit',
                          icon('upload'))
@@ -57,12 +64,13 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
         ),
     
         mainPanel(
-      
-            h3('Standardized data'),
-      
+            
+            tags$h3('Standardized data'),
+            
+            # Print standardized data frame
             tableOutput('data_table'),
-      
-            #div(style='text-align:left;',
+            
+            # Download standardized data
             downloadButton('download', 'Download')
       
         )
@@ -70,9 +78,9 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
 )
 
 
-# Clean data and print table
 server <- function(input, output){
-  
+
+    # Define function to standardize variables
     standardize_vars <- function(df, id_var, ...){
 
         id_var <- enquo(id_var)
@@ -111,17 +119,19 @@ server <- function(input, output){
             select(-contains('_tmp'))
     }
 
-    # Print data frame to screen
+    # Print standardized data frame to screen after submit
     observeEvent(input$submit, {
         output$data_table <- renderTable({
-      
+            
+        # Return null if no file is uploaded
         in_file <- input$in_file
         isolate(if(is.null(in_file)) return(NULL))
-      
+        
+        # Create boolean object to indicate the presence (or not) of a header in the file
         header_bool <- isolate(
             if_else(input$header_check == 'File with header', TRUE, FALSE))
-      
-
+        
+        # Read text file and save as 'download_data'
         download_data <- isolate(
             if(input$delimiter == 'tab'){
                 read_tsv(in_file$datapath,
@@ -135,8 +145,9 @@ server <- function(input, output){
                            col_types = cols(.default = "c"))
             }
         )
-
-        header_vars <- isolate(
+        
+        # Create vector of variables names that require standardization
+        vars_to_standardize <- isolate(
             if(header_bool){
                 strsplit(input$variables, split = ',') %>%
                 flatten_chr() %>%
@@ -150,6 +161,7 @@ server <- function(input, output){
             }
         )
         
+        # Identify name of ID column
         id_col <- isolate(
             if(header_bool){
                 input$id_var
@@ -158,15 +170,19 @@ server <- function(input, output){
                 paste0('X', input$id_var)
             }
         )
-      
+        
+        # Arguments to pass to standardize_vars() function
         args <- isolate(syms(c('download_data',
                                id_col,
-                               header_vars)))
+                               vars_to_standardize)))
         
+        # Create data frame with standardized data
         download_data <<- head(do.call(standardize_vars, args), 25)
-    
+        
+        # Define table formatting
         }, striped = TRUE, align = 'c')
-    
+        
+        # Create file of standardized data for download
         output$download <- downloadHandler(
             filename = 'clean_data.csv',
             content = function(file){
@@ -179,5 +195,5 @@ server <- function(input, output){
 
 }
 
-# Create a Shiny app object
+# Create Shiny app
 shinyApp(ui = ui, server = server)
