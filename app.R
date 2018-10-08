@@ -20,7 +20,7 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
     
         sidebarPanel(
             
-            tags$h5('This app will homoegenize one or more variables for each value in a given ID column.'),
+            tags$h5('This app will homogenize one or more variables for each value in a given ID column.'),
             
             tags$p('Upload a delimited text file, indiciate if it has a header, choose the delimiter, 
               and then enter the ID variable name or position as well as the names or positions 
@@ -84,42 +84,55 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
 
 server <- function(input, output){
 
-    # Define function to homogeize variables
-    homogenize_vars <- function(df, id_var, ...){
-
+        # Define function to homogenize variables (populate column with the most frequently occurring value for each ID)
+        homogenize_vars <- function(df, id_var, ...){
+        
+        # capture name of ID variable as a quosure
         id_var <- enquo(id_var)
+        # convert ID quosure to a string
         id_var_name <- quo_name(id_var)
+        # capture names of variables to be homogenized (as a quosure)
         ns_vars <- quos(...)
+        # convert quosure containing variable names to strings
         ns_var_names <- flatten_chr(map(ns_vars, quo_name))
+        # create a character vector of all column names input by the user
         all_var_names <- c(id_var_name, ns_var_names)
-
-
+        
+        
         replacement_values <- df %>%
+            # select only variables that were provided as user inputs
             select_at(.vars = vars(one_of(all_var_names))) %>%
-            select(!!id_var, !!!ns_vars) %>%
+            # group by ID variable (!! to unquote)
             group_by(!!id_var) %>%
+            # for the variables to be homogenized, replace NA values with '0'
             mutate_at(.vars = vars(one_of(ns_var_names)),
                       .funs = funs(ifelse(is.na(.) | . == '', '0', .))) %>%
+            # gather variable and values into name/value pairs
             gather(var_name, var_value, ns_var_names) %>%
             group_by(!!id_var, var_name, var_value) %>%
+            # count the number of occurences for each value by ID and variable name
             summarise(n = n()) %>%
             group_by(!!id_var, var_name) %>%
+            # select most frequently occuring value for each ID/variable pair (NA's appear as '0')
             summarise(row_count = n(),
-                first_value = first(var_value, order_by = desc(n)),
-                second_value = nth(var_value, 2, order_by = desc(n)),
-                replacement_value = case_when(
-                  first_value != '0' ~ first_value,
-                  !is.na(second_value) ~ second_value,
-                  TRUE ~ '0')) %>%
+                      first_value = first(var_value, order_by = desc(n)),
+                      second_value = nth(var_value, 2, order_by = desc(n)),
+                      replacement_value = case_when(
+                          first_value != '0' ~ first_value,
+                          !is.na(second_value) ~ second_value,
+                          TRUE ~ '0')) %>%
             group_by(!!id_var) %>%
             select(!!id_var, var_name, replacement_value) %>%
             spread(var_name, replacement_value)
-
-
+        
+        
         df <- df %>%
+            # rename variables to be homogenized in original table
             rename_at(.vars = vars(one_of(ns_var_names)),
                       .funs = funs(paste0(., '_tmp'))) %>%
+            # join to data frame containing new values
             left_join(replacement_values, by = id_var_name) %>%
+            # drop original, non-homogenized, variables
             select(-contains('_tmp'))
     }
 
@@ -155,13 +168,16 @@ server <- function(input, output){
             if(header_bool){
                 strsplit(input$variables, split = ',') %>%
                 flatten_chr() %>%
-                trimws(which = 'both')
+                str_remove_all(pattern = ' ')
+                
             }
             else{
                 strsplit(input$variables, split = ',') %>%
-                map(function(x) paste0('X', x)) %>%
                 flatten_chr() %>%
-                trimws(which = 'both')
+                str_remove_all(pattern = ' ') %>%
+                map(function(x) paste0('X', x)) %>%
+                flatten_chr()
+                
             }
         )
         
