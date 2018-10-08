@@ -1,4 +1,4 @@
-# Shiny application that standardizes variables for a given ID column
+# Shiny application that homogenizes variables for a given ID column
 
 library(tidyverse)
 library(shiny)
@@ -11,8 +11,8 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
         tags$style(HTML('h1 {background-color: #357FAA; text-align: center; color: #FFFFFF;}'))
     ),
 
-    headerPanel('Data Standardization Machine',
-                windowTitle = 'Data Standardization Machine'),
+    headerPanel('Data Homogenization Machine',
+                windowTitle = 'Data Homogenization Machine'),
   
     br(),
   
@@ -20,20 +20,20 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
     
         sidebarPanel(
             
-            tags$h5('This app will standardize one or more variables for each value in a given ID column.'),
+            tags$h5('This app will homoegenize one or more variables for each value in a given ID column.'),
             
             tags$p('Upload a delimited text file, indiciate if it has a header, choose the delimiter, 
               and then enter the ID variable name or position as well as the names or positions 
-              of the variables to standardize. Once submitted, the variables listed will be populated 
-              with the most frequently occuring value for each ID. The standardized table is then 
+              of the variables to homogenize. Once submitted, the variables listed will be populated 
+              with the most frequently occuring value for each ID. The homogenized table is then 
               printed to the screen and can be downloaded as a csv file.'),
             
-            tags$a(href="https://github.com/davidldenton/standardize",
+            tags$a(href="https://github.com/davidldenton/homogenize",
                    tags$strong("Additional instructions & git repo", style = "color:purple")),
             
             tags$h3('Input controls'),
 
-            # Choose text file to up;oad
+            # Choose text file to upload
             fileInput(inputId = 'in_file',
                       label = 'Choose text file:',
                       accept = c('text/csv','text/comma-separated-values,text/plain','.csv'),
@@ -55,12 +55,12 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
                       label = HTML('ID column name or numeric position'),
                       value = ''),
             
-            # Input list of variables to standardize
+            # Input list of variables to homogenize
             textInput(inputId = 'variables',
                       label = HTML('List of variable names or numeric positions <br/>(comma-separated)'),
                       value = ''),
             
-            # Submit file for standardization process
+            # Submit file for homogenization process
             actionButton(inputId = 'submit',
                          label = 'Submit',
                          icon('upload'))
@@ -69,12 +69,12 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
     
         mainPanel(
             
-            tags$h3('Standardized data'),
+            tags$h3('Homogenized data'),
             
-            # Print standardized data frame
+            # Print homogenized data frame
             tableOutput('data_table'),
             
-            # Download standardized data
+            # Download homogenized data
             downloadButton('download', 'Download')
       
         )
@@ -84,8 +84,8 @@ ui <- fluidPage(theme = shinytheme('cerulean'),
 
 server <- function(input, output){
 
-    # Define function to standardize variables
-    standardize_vars <- function(df, id_var, ...){
+    # Define function to homogeize variables
+    homogenize_vars <- function(df, id_var, ...){
 
         id_var <- enquo(id_var)
         id_var_name <- quo_name(id_var)
@@ -123,7 +123,7 @@ server <- function(input, output){
             select(-contains('_tmp'))
     }
 
-    # Print standardized data frame to screen after submit
+    # Print homogenized data frame to screen after submit
     observeEvent(input$submit, {
         output$data_table <- renderTable({
             
@@ -150,8 +150,8 @@ server <- function(input, output){
             }
         )
         
-        # Create vector of variables names that require standardization
-        vars_to_standardize <- isolate(
+        # Create vector of variables names that require homogenization
+        vars_to_homogenize <- isolate(
             if(header_bool){
                 strsplit(input$variables, split = ',') %>%
                 flatten_chr() %>%
@@ -175,18 +175,18 @@ server <- function(input, output){
             }
         )
         
-        # Arguments to pass to standardize_vars() function
+        # Arguments to pass to homogenize_vars() function
         args <- isolate(syms(c('download_data',
                                id_col,
-                               vars_to_standardize)))
+                               vars_to_homogenize)))
         
-        # Create data frame with standardized data
-        download_data <<- head(do.call(standardize_vars, args), 25)
+        # Create data frame with homogenized data
+        download_data <<- head(do.call(homogenize_vars, args), 25)
         
         # Define table formatting
         }, striped = TRUE, align = 'c')
         
-        # Create file of standardized data for download
+        # Create file of homogenized data for download
         output$download <- downloadHandler(
             filename = 'clean_data.csv',
             content = function(file){
