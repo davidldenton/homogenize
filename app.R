@@ -1,4 +1,4 @@
-# Shiny application that homogenizes variables for a given ID column
+# Shiny application that homogenizes data for a given ID column
 
 library(tidyverse)
 library(shiny)
